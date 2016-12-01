@@ -1,0 +1,98 @@
+﻿@model Project.Models.UserDetail
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>高雄旅遊小助手</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+         html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                min-height: 100%;
+                line-height: 30px;
+            }
+        ul li {
+            list-style-type: none;
+            display: table;
+            margin: 0 auto;
+        }
+
+        #background {
+            background-image: url(../img/14.jpg);
+        }
+
+        #work {
+            background:transparent
+        }
+    </style>
+</head>
+<body id="background">
+    <center>
+        <div id="work" class="demo-section k-content">
+            <img src="~/img/login.png" />
+            <ul id="fieldlist" class="wrap">
+                <li style="margin-bottom:20px">
+                    @Html.TextBoxFor(Models => Models.UserAccount, new { type = "required", required = "required", placeholder = "請輸入帳號", @class = "textbox", })
+
+                </li>
+                <li style="margin-bottom:20px">
+                    @Html.TextBoxFor(Models => Models.UserPassword, new { type = "Password", required = "required", placeholder = "請輸入密碼", @class = "textbox" })
+
+                </li>
+
+            </ul>
+            <button id="Login" class="k-button">登入</button>
+            @*<button class="k-button">@Html.ActionLink("修改", "UpdateUser", new { UserAccount = "test" }, new { @style = "color:black;text-decoration:none;" })</button>*@
+            <button id="Register" class="k-button">註冊</button>
+        </div>
+        <div id="window"></div>
+    </center>
+    <script>
+        $(".textbox").kendoMaskedTextBox();
+        $("#Login").click(function (e) {
+
+            $.ajax({
+                type: "POST",
+                url: "/Login/UserLogin",
+                data: {
+                    "UserAccount": $("#UserAccount").val(),
+                    "UserPassword": $("#UserPassword").val(),
+                },
+                dataType: "json",
+                success: function (response) {
+                    if (response.length != 0) {
+                        sessionStorage.setItem('useraccount', response[0].UserAccount);
+                        sessionStorage.setItem('userid', response[0].UserId);
+                        document.location.href = "../HomePage/Index";
+                    }
+                    else {
+                        document.getElementById("loginMessage").style.color = "red";
+                        document.getElementById("loginMessage").innerHTML = "帳號或密碼錯誤";
+                    }
+                }
+            });
+            return false;
+        });
+        $("#Register").click(function () {
+
+            $("#window").kendoWindow({
+                width: "380px",
+                height: "410px",
+                title: "註冊",
+                actions: ["Refresh", "Close"],
+                content: "../Register/Index",
+                visible: false,
+                modal: true,
+                draggable: false,
+            }).data("kendoWindow").center().open();
+            $(".example").hide();
+        });
+
+    </script>
+</body>
+</html>

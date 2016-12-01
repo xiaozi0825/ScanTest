@@ -1,0 +1,181 @@
+﻿
+@{
+    ViewBag.Title = "IntroductionIndex";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>景點語音介紹</title>
+</head>
+<body id="background">
+    <div style="width: 100%; height: 100%; float: left; padding-top:2.5%; padding-right: 15px; padding-left: 15px;">
+
+        <div id="opendatagrid" style="width:20%"></div>
+        <div id="GoogleMapDiv" style="float: left;width:75%">
+
+        </div>
+
+
+        <script type="text/javascript">
+            distance = 0;
+            var InfoLocation;
+            var obj = new Object;
+            var num = 0;
+            var EARTH_RADIUS = 6371;//地球半徑6371km
+            var lat, lon;
+            var mapHolder = document.getElementById("GoogleMapDiv");
+            var geomark = new Array();
+            $(document).ready(function () {
+                $("#example").show();
+                getLocation();
+
+            });
+            function getLocation() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(showlocation);
+                }
+                else {
+                    alert("Geolocation is not supported by this browser.");
+                }
+            }
+            function showlocation(position) {
+                lat = position.coords.latitude;
+                lon = position.coords.longitude;
+                getIntroduction();
+            }
+            
+
+            function ShowLocalMap(data) {
+                mapHolder.style.height = "85%";
+                mapHolder.style.width = "75%";
+                var map = {
+                    zoom: 15,
+                    center: new google.maps.LatLng(lat, lon),
+                    mapTypeId: google.maps.MapTypeId.ROADMAP
+                };
+                map = new google.maps.Map(mapHolder, map);
+                var infowindow = new google.maps.InfoWindow();
+
+                var marker, i;
+                var localdata = JSON.parse(data);
+                console.log(localdata);
+                for (i = 0; i < localdata.length; i++) {
+                    console.log(localdata[i].Lat);
+                    marker = new google.maps.Marker({
+                        position: new google.maps.LatLng(localdata[i].Lat, localdata[i].Lon),
+                        
+                        map: map
+                    }); 
+                    google.maps.event.addListener(marker, 'click', (function (marker, i) {
+                        return function () {
+                            infowindow.setContent(localdata[i].LocationName);
+                            infowindow.open(map, marker);
+                        }
+                    })(marker, i));
+                }
+            }
+            function getDistance(lat1, lng1, lat2, lng2) {
+                var radLat1 = rad(lat1);
+                var radLat2 = rad(lat2);
+                var a = radLat1 - radLat2;
+                var b = rad(lng1) - rad(lng2);
+                var s = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(a / 2), 2) +
+                Math.cos(radLat1) * Math.cos(radLat2) * Math.pow(Math.sin(b / 2), 2)));
+                s = s * EARTH_RADIUS;
+                s = Math.round(s * 10000) / 10000;
+                return s;
+            }
+            function rad(d) {
+                return d * Math.PI / 180.0;
+            }
+            function showErrorMessage() {
+                $('#dialog').kendoDialog({
+                    width: "300px",
+                    title: "相關欄位未填寫",
+                    closable: false,
+                    modal: false,
+                    content: "<p>請填寫 '搜尋半徑' 欄位<p>",
+                    actions: [
+                        { text: '前去填寫' }
+                    ]
+                });
+                $('#dialog').data("kendoDialog").open();
+            }
+
+            $("#distance").change(function () {
+                distance = $("#distance").val();
+            });
+
+            function getIntroduction () {
+                $.ajax({
+                    type: "POST",
+                    url: "/Introduction/getIntroduction",
+                    dataType: "json",
+                    success: function (response) {
+                        var LocationData = $.grep(response, function (item, i) {
+                            return getDistance(lat, lon, item.Lat, item.Lon) <= 0.1;
+                        });
+                        InfoLocation = JSON.stringify(LocationData);
+                        createGrid(InfoLocation);
+                        ShowLocalMap(InfoLocation);
+                    }
+                })
+                return false;
+
+            };
+
+            function createGrid (data) {
+                $("#opendatagrid").kendoGrid({
+                    height: "85%",
+                    pageable: true,
+                    dataSource: JSON.parse(data),
+                    columns: [
+                            { field: "LocationName", title: "標題",width:"30%", },
+			                { field: "IntroductionContents", title: "內容", width: "70%", id: "IntroductionContents" },
+                            { command: { text: "語音", click: voice }, title: " ", width: "80px" }
+                    ]
+                });
+            
+            }
+
+            function voice(e) {
+                // prevent page scroll position change
+                e.preventDefault();
+                // e.target is the DOM element representing the button
+                var tr = $(e.target).closest("tr"); // get the current table row (tr)
+                // get the data bound to the current table row
+                var data = this.dataItem(tr);
+                console.log("Details for: " + data.IntroductionContents);
+                $.ajax({
+                    type: "POST",
+                    url: "/../OpendataView/GetVoice",
+                    data: "des=" + data.IntroductionContents,
+                    dataType: "json"
+                });
+            }
+        </script>
+        <style>
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                min-height: 100%;
+                line-height: 30px;
+                padding-right: 15px;
+            }
+
+            #opendatagrid {
+                float: left;
+                width: 25%;
+                height: 85%;
+            }
+        </style>
+    </div>
+</body>
+</html>
+
+
